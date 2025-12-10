@@ -444,7 +444,7 @@ install.packages(c(
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/yourusername/tanzania-hbf-prs.git
+git clone https://github.com/EtienneNtumba/tanzania-hbf-prs.git
 cd tanzania-hbf-prs
 ```
 
@@ -713,8 +713,7 @@ Northumbria University, Newcastle upon Tyne, UK
 Department of Human Genetics  
 McGill University, Montreal, QC, Canada  
 📧 etienne.kabongo@mcgill.ca  
-🔗 [GitHub](https://github.com/yourusername)  
-🔗 [LinkedIn](https://linkedin.com/in/yourprofile)
+🔗 [GitHub](https://github.com/EtienneNtumba)  
 
 ---
 
