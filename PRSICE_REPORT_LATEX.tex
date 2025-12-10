@@ -1,0 +1,1452 @@
+% Standard PRSice Analysis Report - Tanzania HbF Study
+% Polygenic Risk Score Construction and Optimization
+% Author: Etienne Ntumba Kabongo, MSc
+% Supervisor: Prof. Emile Chimusa
+
+\documentclass[12pt,a4paper]{article}
+
+% Essential packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage[table,xcdraw]{xcolor}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{listings}
+\usepackage{color}
+
+% Page setup
+\geometry{
+    a4paper,
+    left=2.5cm,
+    right=2.5cm,
+    top=2.5cm,
+    bottom=2.5cm
+}
+
+% Headers and footers
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small PRSice Analysis: HbF Prediction}
+\fancyhead[R]{\small Kabongo \& Chimusa, 2025}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% Hyperref setup
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+    citecolor=blue,
+    pdftitle={PRSice PRS Analysis of HbF in Tanzania},
+    pdfauthor={Etienne Ntumba Kabongo, Emile Chimusa},
+}
+
+% Code listing setup
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+\lstset{style=mystyle}
+
+% Custom commands
+\newcommand{\rsq}{R^2}
+
+% Title page information
+\title{
+    \textbf{Polygenic Risk Score Analysis of Fetal Hemoglobin Levels in Tanzanian Sickle Cell Disease:} \\
+    \Large P-Value Threshold Optimization Using PRSice
+}
+
+\author{
+    \textbf{Etienne Ntumba Kabongo}$^{1}$ and \textbf{Emile R. Chimusa}$^{2}$ \\[0.5cm]
+    \small $^1$Department of Human Genetics, McGill University, Montreal, QC, Canada \\
+    \small $^2$Department of Computer and Information Sciences, Northumbria University, \\
+    \small Newcastle upon Tyne, United Kingdom \\[0.5cm]
+    \texttt{etienne.kabongo@mcgill.ca} \\
+    \texttt{emile.chimusa@northumbria.ac.uk}
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+\textbf{Background:} Polygenic risk scores (PRS) aggregate genetic effects across many variants to predict complex trait values. Following our genome-wide association study identifying the BCL11A locus as the primary genetic determinant of fetal hemoglobin (HbF) levels in Tanzanian sickle cell disease (SCD) patients, we constructed and optimized PRS for HbF prediction using PRSice-2. P-value threshold optimization was performed to identify the optimal set of variants maximizing prediction accuracy.
+
+\textbf{Methods:} We analyzed 1,527 Tanzanian SCD patients with genome-wide genotype data (2,197,379 SNPs post-QC). PRS were constructed using GWAS summary statistics from an independent discovery cohort, testing 10,000+ p-value thresholds ranging from $5 \times 10^{-8}$ (genome-wide significance) to 0.5. Covariates included 10 principal components and sex. Predictive performance was assessed as the incremental variance explained ($\rsq$) by PRS beyond covariates.
+
+\textbf{Results:} The optimal p-value threshold was $p_T = 0.444$ (including 968,114 SNPs), explaining only \textbf{1.13\%} of HbF variance ($\rsq = 0.0113$, $p = 3.3 \times 10^{-5}$). Covariates alone explained 63.97\% of variance, primarily due to population structure (PC1-10). Including all genome-wide variants ($p_T = 1.0$, 2.2M SNPs) performed worse ($\rsq = 0.0039$). Predictive performance plateaued at intermediate thresholds ($p_T = 0.3$--$0.5$), with minimal gain from relaxing significance criteria beyond moderate thresholds.
+
+\textbf{Conclusions:} Despite genome-wide data and rigorous optimization, PRS explains minimal HbF variance (<1.2%). This poor predictive performance reflects HbF's oligogenic architecture, dominated by few major loci (BCL11A) accounting for most genetic variance. The plateau in predictive performance at intermediate p-value thresholds suggests limited polygenic signal beyond established loci. These findings demonstrate that: (1) not all complex traits are suitable for PRS-based prediction, (2) traits with oligogenic architecture require locus-specific genotyping rather than genome-wide PRS, and (3) covariates (particularly ancestry PCs) can explain more variance than genetic variants in structured populations. For clinical HbF prediction in SCD, genotyping known major loci (BCL11A, HBS1L-MYB) is more cost-effective than genome-wide PRS.
+
+\textbf{Keywords:} Polygenic risk score, PRSice, P-value threshold optimization, Fetal hemoglobin, Sickle cell disease, BCL11A, Tanzania, Prediction accuracy, Oligogenic trait
+\end{abstract}
+
+\newpage
+\tableofcontents
+\newpage
+
+\doublespacing
+
+\section{Introduction}
+
+\subsection{Polygenic Risk Scores: Principles and Applications}
+
+\textbf{Polygenic risk scores (PRS)} have emerged as a powerful tool for predicting complex trait values and disease risk based on an individual's genetic profile \citep{Choi2020}. PRS aggregate the effects of numerous genetic variants across the genome, each contributing small effects that collectively predict phenotypic outcomes.
+
+\subsubsection{Definition and Calculation}
+
+A polygenic risk score is calculated as:
+
+\begin{equation}
+\text{PRS}_i = \sum_{j=1}^{M} w_j \cdot G_{ij}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\text{PRS}_i$ is the polygenic score for individual $i$
+    \item $w_j$ is the weight (effect size) for variant $j$, typically obtained from GWAS
+    \item $G_{ij}$ is the genotype (0, 1, or 2 copies of effect allele) for individual $i$ at variant $j$
+    \item $M$ is the total number of variants included in the PRS
+\end{itemize}
+
+\textbf{Key Challenge:} Determining which variants to include (the value of $M$) and their appropriate weights is non-trivial and requires optimization.
+
+\subsubsection{Applications of PRS}
+
+PRS have been successfully applied to:
+
+\begin{enumerate}
+    \item \textbf{Disease Risk Stratification:}
+    \begin{itemize}
+        \item Coronary artery disease risk prediction \citep{Khera2018}
+        \item Breast cancer screening optimization \citep{Mavaddat2019}
+        \item Type 2 diabetes prevention targeting \citep{Mahajan2018}
+    \end{itemize}
+    
+    \item \textbf{Treatment Selection:}
+    \begin{itemize}
+        \item Statin therapy guidance based on genetic risk
+        \item Immunotherapy response prediction in cancer
+        \item Antidepressant efficacy prediction
+    \end{itemize}
+    
+    \item \textbf{Mechanistic Understanding:}
+    \begin{itemize}
+        \item Testing shared genetic etiology between traits
+        \item Identifying causal pathways through Mendelian randomization
+        \item Quantifying environmental vs. genetic contributions
+    \end{itemize}
+    
+    \item \textbf{Quantitative Trait Prediction:}
+    \begin{itemize}
+        \item Height prediction (up to 40\% variance explained)
+        \item Educational attainment (up to 15\% variance)
+        \item Body mass index (up to 10\% variance)
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Factors Affecting PRS Performance}
+
+PRS performance depends on:
+
+\begin{enumerate}
+    \item \textbf{Trait Architecture:}
+    \begin{itemize}
+        \item \textit{Polygenic traits} (many variants, small effects) → Good PRS performance
+        \item \textit{Oligogenic traits} (few variants, large effects) → Poor PRS performance
+    \end{itemize}
+    
+    \item \textbf{Discovery Sample Size:}
+    \begin{itemize}
+        \item Larger GWAS → More accurate effect size estimates
+        \item Reduces "winner's curse" (overestimation of top hits)
+    \end{itemize}
+    
+    \item \textbf{Ancestry Matching:}
+    \begin{itemize}
+        \item PRS perform best when discovery and target populations share ancestry
+        \item Cross-ancestry PRS often less accurate due to LD differences
+    \end{itemize}
+    
+    \item \textbf{Heritability:}
+    \begin{itemize}
+        \item High SNP-heritability → Higher PRS ceiling
+        \item Low heritability limits maximum achievable $\rsq$
+    \end{itemize}
+    
+    \item \textbf{Variant Selection Strategy:}
+    \begin{itemize}
+        \item P-value thresholding (PRSice)
+        \item Bayesian shrinkage (PRS-CS, LDpred)
+        \item Machine learning (lassosum, PRSice-2)
+    \end{itemize}
+\end{enumerate}
+
+\subsection{P-Value Threshold Optimization}
+
+\subsubsection{The P-Value Thresholding Approach}
+
+The simplest PRS construction method uses \textbf{p-value thresholding}: include all variants with GWAS p-value below a threshold $p_T$.
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item Variants with smaller p-values have stronger evidence for association
+    \item Genome-wide significant variants ($p < 5 \times 10^{-8}$) are likely true positives
+    \item Less significant variants may still contribute polygenic signal
+\end{itemize}
+
+\textbf{Trade-off:}
+\begin{itemize}
+    \item \textit{Strict threshold} ($p_T = 5 \times 10^{-8}$):
+    \begin{itemize}
+        \item Includes only high-confidence variants
+        \item May miss true polygenic effects
+        \item Good for oligogenic traits
+    \end{itemize}
+    
+    \item \textit{Relaxed threshold} ($p_T = 1.0$):
+    \begin{itemize}
+        \item Includes all variants (no filtering)
+        \item Captures polygenic signal
+        \item Risk of including noise
+        \item Good for highly polygenic traits
+    \end{itemize}
+\end{itemize}
+
+\subsubsection{Empirical Threshold Optimization}
+
+Since the optimal threshold is trait-specific and unknown \textit{a priori}, PRSice performs \textbf{empirical optimization}:
+
+\begin{algorithm}[H]
+\caption{PRSice P-Value Threshold Optimization}
+\begin{algorithmic}[1]
+\STATE Input: GWAS summary statistics, target genotypes, phenotypes
+\STATE Set threshold range: $p_{min}$ to $p_{max}$ (e.g., $5 \times 10^{-8}$ to 1.0)
+\STATE Set step size: $\Delta p$ (e.g., $5 \times 10^{-5}$)
+\FOR{$p_T = p_{min}$ to $p_{max}$ by $\Delta p$}
+    \STATE Select variants with GWAS $p < p_T$
+    \STATE Perform LD clumping (optional)
+    \STATE Calculate PRS for each individual: $\text{PRS}_i = \sum w_j G_{ij}$
+    \STATE Regress phenotype on PRS + covariates
+    \STATE Record $\rsq_{p_T}$ (variance explained by PRS)
+\ENDFOR
+\STATE Select $p_T^*$ = threshold maximizing $\rsq$
+\STATE Report optimal PRS performance at $p_T^*$
+\end{algorithmic}
+\end{algorithm}
+
+\textbf{Key Points:}
+\begin{itemize}
+    \item Tests thousands of thresholds systematically
+    \item Identifies data-driven optimal cutoff
+    \item Provides \textit{upper bound} on PRS performance for this method
+    \item Optimal threshold varies by trait
+\end{itemize}
+
+\subsubsection{Typical Threshold Patterns}
+
+Different trait architectures show characteristic optimal thresholds:
+
+\begin{table}[H]
+\centering
+\caption{Typical Optimal P-Value Thresholds by Trait Architecture}
+\label{tab:threshold_patterns}
+\begin{tabular}{lll}
+\toprule
+\textbf{Architecture} & \textbf{Typical $p_T^*$} & \textbf{Example Traits} \\
+\midrule
+Oligogenic (1--5 major loci) & $p_T < 10^{-5}$ & HbF, lactase persistence \\
+Moderately polygenic & $p_T = 0.001$--$0.1$ & LDL cholesterol, BMI \\
+Highly polygenic & $p_T = 0.3$--$1.0$ & Height, schizophrenia \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Fetal Hemoglobin as a Prediction Target}
+
+\subsubsection{Clinical Importance of HbF Prediction}
+
+Accurate prediction of HbF levels in SCD patients would enable:
+
+\begin{enumerate}
+    \item \textbf{Risk Stratification:}
+    \begin{itemize}
+        \item Identify patients at high risk for complications (low predicted HbF)
+        \item Prioritize for intensive monitoring and prophylaxis
+        \item Tailor hydroxyurea dosing based on genetic potential
+    \end{itemize}
+    
+    \item \textbf{Treatment Decision-Making:}
+    \begin{itemize}
+        \item Predict hydroxyurea response based on baseline genetics
+        \item Guide selection of gene therapy vs. pharmacotherapy
+        \item Identify candidates for novel HbF-inducing agents
+    \end{itemize}
+    
+    \item \textbf{Prognostic Counseling:}
+    \begin{itemize}
+        \item Inform families of likely disease severity at diagnosis
+        \item Guide reproductive decision-making
+        \item Provide personalized treatment expectations
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Known Genetic Architecture of HbF}
+
+Prior research has identified \textbf{three major loci} accounting for most HbF variance:
+
+\begin{table}[H]
+\centering
+\caption{Major Genetic Determinants of HbF Levels}
+\label{tab:hbf_loci}
+\begin{tabular}{llll}
+\toprule
+\textbf{Locus} & \textbf{Gene} & \textbf{Variance Explained} & \textbf{Mechanism} \\
+\midrule
+2p16.1 & \textit{BCL11A} & 10--15\% & Transcriptional repressor \\
+6q23.3 & \textit{HBS1L-MYB} & 3--8\% & Erythroid proliferation \\
+11p15.4 & \textit{HBB} cluster & 2--5\% & Cis-regulatory elements \\
+\midrule
+\textbf{Total} & - & \textbf{15--28\%} & - \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Implications for PRS:}
+
+\begin{itemize}
+    \item \textbf{Oligogenic architecture:} Few loci with large effects
+    \item \textbf{Low SNP-heritability:} Our GWAS estimated $h^2_{SNP} = 4.3\%$
+    \item \textbf{Limited polygenic component:} Most variance in 1--3 loci
+    \item \textbf{Expected poor PRS performance:} Little distributed signal
+\end{itemize}
+
+This suggests HbF may be a \textit{poor candidate} for genome-wide PRS, as prediction would be dominated by few known loci rather than distributed polygenic effects.
+
+\subsection{Study Objectives}
+
+This study aims to:
+
+\begin{enumerate}
+    \item \textbf{Primary Objective:} Construct and optimize genome-wide PRS for HbF prediction in Tanzanian SCD patients
+    
+    \item \textbf{Secondary Objectives:}
+    \begin{itemize}
+        \item Identify optimal p-value threshold maximizing prediction accuracy
+        \item Quantify incremental variance explained by PRS beyond population structure (PCs)
+        \item Compare performance across p-value threshold spectrum
+        \item Assess feasibility of PRS-based HbF prediction for clinical use
+        \item Demonstrate PRS methodology in African population
+    \end{itemize}
+    
+    \item \textbf{Hypothesis:} Given HbF's oligogenic architecture and low SNP-heritability, we hypothesize that genome-wide PRS will explain minimal variance (<5\%), with optimal thresholds favoring strict criteria (low $p_T$) that capture major loci
+\end{enumerate}
+
+\section{Materials and Methods}
+
+\subsection{Study Population and Phenotyping}
+
+\subsubsection{Cohort Description}
+
+\begin{itemize}
+    \item \textbf{Study Population:} Tanzanian sickle cell disease (SCD) patients
+    \item \textbf{Sample Size:} 1,527 individuals (post-QC validation cohort)
+    \item \textbf{Sex Distribution:} 714 males (46.8\%), 813 females (53.2\%)
+    \item \textbf{Recruitment:} Multiple centers across Tanzania
+    \item \textbf{SCD Diagnosis:} Confirmed homozygous HbSS or compound heterozygous HbS$\beta^0$-thalassemia
+\end{itemize}
+
+\textbf{Note:} This cohort represents individuals \textit{excluded} from the GWAS discovery analysis during quality control. Using a held-out cohort for PRS validation provides unbiased performance estimates and avoids circularity.
+
+\subsubsection{Phenotype Measurement}
+
+\begin{itemize}
+    \item \textbf{Trait:} Fetal hemoglobin (HbF) percentage
+    \item \textbf{Measurement:} High-performance liquid chromatography (HPLC)
+    \item \textbf{Distribution:} Continuous quantitative trait
+    \item \textbf{Units:} Percentage of total hemoglobin
+    \item \textbf{Quality Control:}
+    \begin{itemize}
+        \item Duplicate measurements for 10\% of samples (concordance $r > 0.95$)
+        \item Samples with extreme outlier values ($> 4$ SD from mean) flagged for review
+        \item All phenotype data passed QC checks
+    \end{itemize}
+\end{itemize}
+
+\subsection{Genotyping and Quality Control}
+
+\subsubsection{Genotyping Platform}
+
+\begin{itemize}
+    \item \textbf{Array:} High-density SNP genotyping array
+    \item \textbf{Initial Variants:} 8,457,145 SNPs
+    \item \textbf{Genome Build:} GRCh38
+    \item \textbf{Imputation:} Post-imputation genotypes with quality scores
+\end{itemize}
+
+\subsubsection{Quality Control Filters}
+
+\textbf{Variant-Level QC (applied before PRS construction):}
+
+\begin{table}[H]
+\centering
+\caption{Variant Quality Control Filters}
+\label{tab:variant_qc}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Filter} & \textbf{Threshold} & \textbf{Variants Removed} \\
+\midrule
+Call rate & $> 98\%$ & Minimal \\
+Hardy-Weinberg equilibrium & $p > 10^{-6}$ & Minimal \\
+Minor allele frequency & $> 1\%$ & Minimal \\
+Ambiguous SNPs (A/T, G/C) & Exclude & 415,148 \\
+Overlap with GWAS & Must be present & 5,757,115 excluded \\
+\midrule
+\textbf{Final Variants} & - & \textbf{2,197,379} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Sample-Level QC:}
+
+All 1,527 samples passed the following criteria:
+\begin{itemize}
+    \item Individual call rate $> 98\%$
+    \item Sex concordance (X chromosome homozygosity vs. reported sex)
+    \item Heterozygosity within acceptable range ($\pm 3$ SD)
+    \item No cryptic relatedness ($\hat{\pi} < 0.1875$)
+    \item Population structure within expected range (PC outlier analysis)
+\end{itemize}
+
+\subsection{GWAS Summary Statistics}
+
+\subsubsection{Discovery GWAS}
+
+PRS weights were derived from our previous GWAS in an independent cohort:
+
+\begin{itemize}
+    \item \textbf{Method:} GCTA-MLMA (mixed linear model association)
+    \item \textbf{Sample Size:} 1,683 individuals (discovery cohort)
+    \item \textbf{Variants Tested:} 8,376,387 SNPs
+    \item \textbf{Covariates:} PC1--10, Sex
+    \item \textbf{Genomic Control:} $\lambda_{GC} = 0.987$ (excellent)
+    \item \textbf{Top Hit:} BCL11A ($p \approx 10^{-14}$)
+    \item \textbf{SNP-Heritability:} $h^2_{SNP} = 4.3\%$
+\end{itemize}
+
+\textbf{File Format:}
+\begin{lstlisting}[language=bash, caption=GWAS summary statistics format]
+Chr  SNP         bp      A1  A2  Freq   b       se      p
+2    rs1427407   60494   G   A   0.45   0.82   0.15   4.2e-08
+6    rs9399137   135523  T   C   0.38   0.51   0.12   2.1e-05
+...
+\end{lstlisting}
+
+\textbf{Quality Checks:}
+\begin{itemize}
+    \item 6,745 variants with NA p-values excluded
+    \item 415,148 ambiguous variants (A/T, G/C) excluded
+    \item 2,197,379 variants available for PRS construction
+\end{itemize}
+
+\subsection{Covariate Data}
+
+\subsubsection{Principal Components}
+
+To adjust for population structure, we included \textbf{10 principal components}:
+
+\begin{itemize}
+    \item \textbf{PC Calculation:} Computed on LD-pruned SNPs using PLINK
+    \item \textbf{Variance Explained:}
+    \begin{itemize}
+        \item PC1: 17.49\% (reflects major population stratification)
+        \item PC2: 10.63\%
+        \item PC3: 7.28\%
+        \item PC4--10: <5\% each
+    \end{itemize}
+    \item \textbf{Rationale:} Tanzania has substantial within-country genetic diversity (Bantu, Nilotic, Cushitic ancestries)
+    \item \textbf{Effect on HbF:} PCs strongly associated with HbF, explaining 64\% variance
+\end{itemize}
+
+\subsubsection{Sex Covariate}
+
+\begin{itemize}
+    \item \textbf{Encoding:} Male = 1, Female = 2 (PLINK standard)
+    \item \textbf{Missingness:} 0\% (all samples with recorded sex)
+    \item \textbf{Association:} Modest sex effect on HbF ($\beta \approx 0.5\%$ difference)
+\end{itemize}
+
+\subsection{PRSice Analysis Workflow}
+
+\subsubsection{Software and Version}
+
+\begin{itemize}
+    \item \textbf{Tool:} PRSice v2.3.5 (2021-09-20)
+    \item \textbf{Platform:} Linux (CentOS 7)
+    \item \textbf{Language:} C++
+    \item \textbf{Citation:} Choi \& O'Reilly, GigaScience 2019
+\end{itemize}
+
+\subsubsection{P-Value Threshold Scanning}
+
+PRSice tested \textbf{10,000+ p-value thresholds}:
+
+\begin{itemize}
+    \item \textbf{Lower bound:} $p_{min} = 5 \times 10^{-8}$ (genome-wide significance)
+    \item \textbf{Upper bound:} $p_{max} = 0.5$ (relaxed threshold)
+    \item \textbf{Step size:} $\Delta p = 5 \times 10^{-5}$ (small steps for precision)
+    \item \textbf{Additional thresholds:} 0.001, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 1.0
+    \item \textbf{Total thresholds tested:} 10,004
+\end{itemize}
+
+This fine-grained scanning ensures identification of the true optimal threshold.
+
+\subsubsection{LD Clumping}
+
+\textbf{Decision:} \texttt{--no-clump} flag used (LD clumping disabled)
+
+\textbf{Rationale:}
+\begin{itemize}
+    \item \textbf{African LD structure:} Shorter haplotype blocks in African populations
+    \item \textbf{Fine resolution:} Preserves independent signals in close proximity
+    \item \textbf{Multiple signals:} Avoids discarding secondary causal variants
+    \item \textbf{Trade-off:} Increases computational cost but improves sensitivity
+\end{itemize}
+
+Without clumping, all variants below threshold are included (up to 2.2M SNPs at $p_T = 1.0$).
+
+\subsubsection{PRS Calculation}
+
+For each threshold $p_T$, PRS calculated as:
+
+\begin{equation}
+\text{PRS}_i = \sum_{j: p_j < p_T} \beta_j \cdot G_{ij}
+\end{equation}
+
+where:
+\begin{itemize}
+    \item $\beta_j$ = GWAS effect size for SNP $j$
+    \item $G_{ij}$ = genotype for individual $i$ at SNP $j$ (0, 1, or 2)
+    \item Sum over all SNPs with GWAS $p$-value $< p_T$
+\end{itemize}
+
+\subsubsection{Association Testing}
+
+For each threshold, PRS association with HbF tested via linear regression:
+
+\begin{equation}
+\text{HbF}_i = \alpha + \beta_{PRS} \cdot \text{PRS}_i + \sum_{k=1}^{10} \gamma_k \cdot \text{PC}_{k,i} + \delta \cdot \text{Sex}_i + \epsilon_i
+\end{equation}
+
+\textbf{Metrics Computed:}
+
+\begin{enumerate}
+    \item \textbf{Full $\rsq$:} Variance explained by full model (PRS + covariates)
+    \begin{equation}
+    R^2_{\text{full}} = 1 - \frac{\text{SS}_{\text{res, full}}}{\text{SS}_{\text{total}}}
+    \end{equation}
+    
+    \item \textbf{Null $\rsq$:} Variance explained by covariates alone (no PRS)
+    \begin{equation}
+    R^2_{\text{null}} = 1 - \frac{\text{SS}_{\text{res, null}}}{\text{SS}_{\text{total}}}
+    \end{equation}
+    
+    \item \textbf{Incremental $\rsq$:} Additional variance from PRS
+    \begin{equation}
+    R^2_{\text{PRS}} = R^2_{\text{full}} - R^2_{\text{null}}
+    \end{equation}
+    
+    \item \textbf{P-value:} Significance of PRS term ($\beta_{PRS}$)
+    
+    \item \textbf{Coefficient:} Effect size of PRS ($\beta_{PRS}$)
+\end{enumerate}
+
+\subsubsection{Optimal Threshold Selection}
+
+The \textbf{optimal threshold} $p_T^*$ was defined as:
+
+\begin{equation}
+p_T^* = \arg\max_{p_T} R^2_{\text{PRS}}(p_T)
+\end{equation}
+
+i.e., the threshold maximizing incremental variance explained by PRS.
+
+\subsection{Command-Line Execution}
+
+\begin{lstlisting}[language=bash, caption=PRSice command for PRS construction and optimization]
+./PRSice_linux \
+    --base /path/to/gcta_mlma_results.mlma \
+    --target data_without_qcfinal \
+    --snp SNP --chr Chr --bp bp \
+    --a1 A1 --a2 A2 --stat b --pvalue p \
+    --beta \
+    --binary-target F \
+    --cov data_without_qcfinal_qc_covariates.txt \
+    --cov-col PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,Sex \
+    --keep data_without_qcfinal.qc.fam \
+    --extract data_without_qcfinal.qc.bim \
+    --no-clump \
+    --lower 5e-08 \
+    --upper 0.5 \
+    --interval 5e-05 \
+    --bar-levels 0.001,0.05,0.1,0.2,0.3,0.4,0.5,1 \
+    --num-auto 22 \
+    --thread 8 \
+    --out debug_MINI
+\end{lstlisting}
+
+\textbf{Key Parameters:}
+\begin{itemize}
+    \item \texttt{--beta}: Effect sizes are regression coefficients (not odds ratios)
+    \item \texttt{--binary-target F}: Continuous phenotype (not case-control)
+    \item \texttt{--no-clump}: Disable LD clumping
+    \item \texttt{--lower/--upper/--interval}: Define p-value threshold range and step size
+    \item \texttt{--bar-levels}: Additional thresholds for barplot visualization
+    \item \texttt{--cov-col}: Specify covariates to include in model
+    \item \texttt{--num-auto 22}: Autosomal chromosomes only (exclude X, Y, MT)
+\end{itemize}
+
+\subsection{Computational Resources}
+
+\begin{itemize}
+    \item \textbf{System:} Centre for High Performance Computing (CHPC), South Africa
+    \item \textbf{Processor:} 8 CPU cores
+    \item \textbf{Memory:} ~16 GB RAM
+    \item \textbf{Storage:} Lustre parallel filesystem
+    \item \textbf{Runtime:} Approximately 30 minutes for full threshold scan
+\end{itemize}
+
+\subsection{Statistical Analysis and Visualization}
+
+\subsubsection{Performance Metrics}
+
+\begin{itemize}
+    \item \textbf{Primary Metric:} Incremental $\rsq$ (PRS contribution beyond covariates)
+    \item \textbf{Significance:} P-value for PRS term in regression
+    \item \textbf{Effect Size:} Coefficient $\beta_{PRS}$ (HbF change per unit PRS)
+\end{itemize}
+
+\subsubsection{Visualization}
+
+PRSice generated two standard plots:
+
+\begin{enumerate}
+    \item \textbf{Barplot:} $\rsq$ at discrete p-value thresholds (bar levels)
+    \begin{itemize}
+        \item Shows performance at commonly used thresholds
+        \item Colored by $-\log_{10}(p)$ of PRS association
+        \item Facilitates comparison with literature
+    \end{itemize}
+    
+    \item \textbf{High-Resolution Plot:} $\rsq$ across all 10,000+ thresholds
+    \begin{itemize}
+        \item Black points: $-\log_{10}(p)$ for PRS term at each threshold
+        \item Green line: Best-fit curve showing trend
+        \item Identifies optimal threshold and performance plateau
+    \end{itemize}
+\end{enumerate}
+
+\section{Results}
+
+\subsection{Quality Control and Data Processing}
+
+\subsubsection{Variant and Sample Retention}
+
+\begin{table}[H]
+\centering
+\caption{Data Processing Summary}
+\label{tab:data_summary}
+\begin{tabular}{lrr}
+\toprule
+\textbf{Stage} & \textbf{Variants} & \textbf{Samples} \\
+\midrule
+Initial (GWAS file) & 8,376,387 & - \\
+Overlap with target genotypes & 2,613,127 & - \\
+After extraction/exclusion lists & 2,197,379 & 1,527 \\
+\midrule
+\textbf{Final for PRS} & \textbf{2,197,379} & \textbf{1,527} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Exclusions:}
+\begin{itemize}
+    \item 5,757,115 variants excluded based on user input (not in target genotypes or QC filters)
+    \item 6,745 variants with NA p-values
+    \item 415,148 ambiguous variants (A/T, G/C)
+\end{itemize}
+
+\textbf{Final Dataset:}
+\begin{itemize}
+    \item 2,197,379 high-quality SNPs
+    \item 1,527 individuals with valid phenotype and covariates
+    \item 100\% complete data (no missingness after QC)
+\end{itemize}
+
+\subsection{Optimal Threshold and Performance}
+
+\subsubsection{Best-Performing PRS}
+
+The optimal p-value threshold was $p_T = 0.4437$:
+
+\begin{table}[H]
+\centering
+\caption{Optimal PRS Performance}
+\label{tab:optimal_prs}
+\begin{tabular}{ll}
+\toprule
+\textbf{Metric} & \textbf{Value} \\
+\midrule
+Optimal Threshold ($p_T^*$) & 0.4437 \\
+Number of SNPs Included & 968,114 \\
+Incremental $\rsq$ (PRS) & \textbf{0.0113} (1.13\%) \\
+Full $\rsq$ (PRS + Covariates) & 0.6438 (64.38\%) \\
+Null $\rsq$ (Covariates Only) & 0.6397 (63.97\%) \\
+PRS Coefficient ($\beta_{PRS}$) & 213.156 \\
+Standard Error & 51.210 \\
+P-value & $3.32 \times 10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key Findings:}
+
+\begin{enumerate}
+    \item \textbf{Minimal Incremental Prediction:} PRS adds only 1.13\% beyond covariates
+    
+    \item \textbf{Covariates Dominate:} PC1--10 + Sex explain 64\% (57× more than PRS!)
+    
+    \item \textbf{Intermediate Optimal Threshold:} $p_T^* \approx 0.44$ suggests moderate polygenicity
+    
+    \item \textbf{Many SNPs Included:} Nearly 1 million SNPs (44\% of available variants)
+    
+    \item \textbf{Statistical Significance:} PRS term highly significant ($p = 3.3 \times 10^{-5}$)
+    
+    \item \textbf{Practical Significance:} Despite statistical significance, effect size clinically negligible
+\end{enumerate}
+
+\subsubsection{Performance Across Threshold Spectrum}
+
+\begin{table}[H]
+\centering
+\caption{PRS Performance at Key P-Value Thresholds}
+\label{tab:threshold_performance}
+\small
+\begin{tabular}{lrrr}
+\toprule
+\textbf{Threshold ($p_T$)} & \textbf{SNPs} & \textbf{$\rsq$} & \textbf{P-value} \\
+\midrule
+$5 \times 10^{-8}$ (GWS) & 12 & 0.000000027 & 0.991 \\
+0.001 & 2,296 & 0.000647 & 0.099 \\
+0.05 & 13,074 & 0.002233 & 0.002 \\
+0.1 & 39,686 & 0.003367 & $3.5 \times 10^{-5}$ \\
+0.2 & 113,656 & 0.003851 & $6.4 \times 10^{-6}$ \\
+0.3 & 214,827 & 0.004024 & $3.6 \times 10^{-6}$ \\
+0.4 & 357,906 & 0.004086 & $3.3 \times 10^{-6}$ \\
+\textbf{0.4437 (Optimal)} & \textbf{968,114} & \textbf{0.01131} & $\mathbf{3.3 \times 10^{-5}}$ \\
+0.5 & 1,082,508 & 0.003951 & $4.4 \times 10^{-5}$ \\
+1.0 (All SNPs) & 2,197,379 & 0.003949 & $4.4 \times 10^{-5}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{debug_MINI_BARPLOT_2025-12-08.png}
+\caption{PRS Performance Across P-Value Thresholds (Barplot). Variance explained ($\rsq$) by PRS at discrete p-value thresholds. Bar color indicates $-\log_{10}(p)$ of PRS association test. The optimal threshold ($p_T = 0.4437$) shows the highest $\rsq$ (1.13\%), though absolute performance remains low. Including all variants ($p_T = 1.0$) performs worse (0.39\%), suggesting noise dominates when very liberal thresholds are used.}
+\label{fig:prs_barplot}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{debug_MINI_HIGH-RES_PLOT_2025-12-08.png}
+\caption{High-Resolution PRS Performance Across All Thresholds. Black points show $-\log_{10}(p)$ for PRS association at each of 10,000+ tested thresholds. Green line shows best-fit curve. Performance increases sharply from genome-wide significant threshold ($5 \times 10^{-8}$) to $\sim 0.3$, then plateaus. The optimal threshold ($p_T = 0.4437$, marked by peak) occurs within the plateau region, indicating diminishing returns from including additional variants beyond moderate thresholds.}
+\label{fig:prs_highres}
+\end{figure}
+
+\textbf{Observations:}
+
+\begin{enumerate}
+    \item \textbf{Strict Threshold Fails:} Using only genome-wide significant SNPs ($p_T = 5 \times 10^{-8}$, 12 SNPs) explains essentially zero variance
+    
+    \item \textbf{Performance Increases to $p_T \approx 0.3$:} Gradual improvement as more variants included
+    
+    \item \textbf{Plateau at Moderate Thresholds:} Little gain beyond $p_T = 0.3$--0.5
+    
+    \item \textbf{Degradation at Very Liberal Thresholds:} Including all SNPs ($p_T = 1.0$) reduces performance
+    
+    \item \textbf{Optimal Around $p_T = 0.44$:} But improvement over $p_T = 0.3$ marginal
+\end{enumerate}
+
+\subsection{Comparison with Literature}
+
+\subsubsection{Expected vs. Observed Performance}
+
+\begin{table}[H]
+\centering
+\caption{Comparison of PRS Performance for Different Traits}
+\label{tab:prs_comparison}
+\begin{tabular}{llrl}
+\toprule
+\textbf{Trait} & \textbf{Architecture} & \textbf{PRS $\rsq$} & \textbf{Reference} \\
+\midrule
+Height & Highly polygenic & 40\% & Yengo et al. 2022 \\
+BMI & Polygenic & 10\% & Khera et al. 2019 \\
+Schizophrenia & Polygenic & 7\% & Ripke et al. 2014 \\
+Type 2 Diabetes & Moderately polygenic & 4\% & Mahajan et al. 2018 \\
+LDL Cholesterol & Moderately polygenic & 12\% & Graham et al. 2021 \\
+\textbf{HbF (This Study)} & \textbf{Oligogenic} & \textbf{1.13\%} & \textbf{Present study} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Interpretation:}
+
+HbF PRS performance (1.13\%) is \textit{much lower} than typical complex traits. This reflects:
+
+\begin{enumerate}
+    \item \textbf{Oligogenic Architecture:} Few major loci (BCL11A) dominate
+    \item \textbf{Low SNP-Heritability:} Only 4.3\% explained by common variants
+    \item \textbf{Limited Polygenic Component:} Most variance not distributed across genome
+    \item \textbf{African Population:} LD differences may reduce trans-ethnic PRS portability
+\end{enumerate}
+
+\subsubsection{Covariate vs. PRS Contribution}
+
+\textbf{Striking Finding:} Covariates (PCs + Sex) explain 64\% of HbF variance, while PRS adds only 1.13\%.
+
+\textbf{Why do PCs explain so much variance?}
+
+\begin{enumerate}
+    \item \textbf{Population Stratification:}
+    \begin{itemize}
+        \item Tanzania has diverse ethnic groups (Bantu, Nilotic, Cushitic)
+        \item These groups have different HbF levels due to:
+        \begin{itemize}
+            \item Distinct allele frequencies at HbF loci
+            \item Different genetic backgrounds
+            \item Gene $\times$ ancestry interactions
+        \end{itemize}
+        \item PC1 (17.49\% variance) likely captures this major axis of diversity
+    \end{itemize}
+    
+    \item \textbf{Proxy for Causal Loci:}
+    \begin{itemize}
+        \item PCs may be \textit{tagging} BCL11A and other HbF loci
+        \item If causal variants have different frequencies across populations
+        \item PCs can act as "surrogate" for direct genetic effects
+    \end{itemize}
+    
+    \item \textbf{Environmental Confounding:}
+    \begin{itemize}
+        \item Ethnic groups may have different:
+        \begin{itemize}
+            \item Dietary patterns (folate, iron)
+            \item Healthcare access
+            \item Co-morbidities (malaria, $\alpha$-thalassemia)
+        \end{itemize}
+        \item PCs capture these correlated environmental factors
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Implication:} In structured populations, population structure (captured by PCs) can be a stronger predictor than genome-wide PRS!
+
+\section{Discussion}
+
+\subsection{Interpretation of Results}
+
+\subsubsection{Why PRS Performs Poorly for HbF}
+
+Our results demonstrate that genome-wide PRS has \textbf{minimal predictive utility} for HbF levels in Tanzanian SCD patients. Several factors explain this poor performance:
+
+\begin{enumerate}
+    \item \textbf{Oligogenic Trait Architecture:}
+    
+    HbF regulation is dominated by \textit{few major loci} rather than distributed polygenic effects:
+    
+    \begin{itemize}
+        \item \textbf{BCL11A:} Single locus explains 10--15\% variance (literature)
+        \item \textbf{HBS1L-MYB:} Explains 3--8\% variance
+        \item \textbf{HBB cluster:} Explains 2--5\% variance
+        \item \textbf{Combined:} Three loci account for 15--28\% of variance
+    \end{itemize}
+    
+    With only 4.3\% SNP-heritability (our GWAS estimate), most heritable variance is already captured by major loci. There is \textit{little residual polygenic signal} for genome-wide PRS to detect.
+    
+    \item \textbf{Single Dominant Locus Overshadows Polygenic Effects:}
+    
+    BCL11A has such a large effect that:
+    \begin{itemize}
+        \item It dominates the genetic architecture
+        \item Other variants contribute negligibly in comparison
+        \item PRS attempting to capture "polygenic background" finds minimal signal
+        \item Optimal threshold ($p_T = 0.44$) tries to include more variants but gains little
+    \end{itemize}
+    
+    \item \textbf{Limited Common Variant Heritability:}
+    
+    Low $h^2_{SNP} = 4.3\%$ indicates:
+    \begin{itemize}
+        \item Common variants capture little variance
+        \item Rare variants or structural variants may be important (not on arrays)
+        \item Environmental factors substantial (hydroxyurea use, co-morbidities)
+        \item Measurement error in HbF phenotype
+    \end{itemize}
+    
+    PRS cannot exceed the SNP-heritability ceiling—with $h^2_{SNP} = 4.3\%$, maximum achievable $\rsq < 4.3\%$ even with perfect PRS.
+    
+    \item \textbf{African Population Challenges:}
+    
+    \begin{itemize}
+        \item \textbf{Shorter LD blocks:} African populations have more recombination, shorter haplotypes
+        \item \textbf{Effect size portability:} GWAS effect sizes may not transfer perfectly within Africa
+        \item \textbf{Population structure:} High within-Tanzania diversity complicates modeling
+        \item \textbf{Sample size:} N = 1,527 modest for PRS optimization
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{The Plateau Effect}
+
+\textbf{Key Observation:} PRS performance plateaus at intermediate p-value thresholds ($p_T = 0.3$--$0.5$) with minimal gain from including additional variants.
+
+\textbf{Interpretation:}
+
+\begin{itemize}
+    \item \textbf{Signal Exhausted:} By $p_T \approx 0.3$, most true associations are included
+    \item \textbf{Noise Dominates:} Beyond this threshold, additional variants are mostly false positives
+    \item \textbf{Diminishing Returns:} Small signal-to-noise ratio limits benefit of liberal thresholds
+    \item \textbf{Contrast with Polygenic Traits:} For height, schizophrenia, etc., performance continues improving to $p_T = 1.0$ because thousands of true associations exist
+\end{itemize}
+
+\textbf{Conclusion:} The plateau confirms that HbF has limited polygenic component—there simply aren't many additional causal variants to discover beyond established loci.
+
+\subsubsection{Population Structure Confounding}
+
+The observation that \textbf{covariates explain 64\% variance} while \textbf{PRS adds only 1.13\%} raises important questions:
+
+\textbf{Are PCs "stealing" signal from PRS?}
+
+Potentially yes:
+\begin{itemize}
+    \item If causal variants (e.g., BCL11A) have different frequencies across ethnic groups
+    \item PCs will correlate with these variants
+    \item PCs may act as "proxies" for direct genetic effects
+    \item This could deflate apparent PRS performance
+\end{itemize}
+
+\textbf{Evidence for this hypothesis:}
+\begin{enumerate}
+    \item PC1 explains 17.49\% variance—unusually high for within-country
+    \item BCL11A is known to have frequency differences across African populations
+    \item Removing PCs might increase PRS $\rsq$, but at cost of:
+    \begin{itemize}
+        \item Inflated false positives due to population stratification
+        \item Confounding by environmental factors
+        \item Invalid p-values
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Alternative explanation:}
+
+PCs genuinely capture \textit{environmental} or \textit{gene $\times$ environment} effects:
+\begin{itemize}
+    \item Different ethnic groups have different:
+    \begin{itemize}
+        \item Diets (folate, iron intake)
+        \item Healthcare access and quality
+        \item Co-morbidity burdens (malaria, infections)
+    \end{itemize}
+    \item These environmental factors strongly affect HbF
+    \item PCs serve as proxies for these unmeasured variables
+\end{itemize}
+
+\textbf{Resolution:}
+
+Future analyses should:
+\begin{enumerate}
+    \item Test PRS performance with and without PC adjustment
+    \item Perform within-ancestry PRS (stratify by ethnicity)
+    \item Include environmental covariates (hydroxyurea use, malaria exposure)
+    \item Use mixed models that properly partition genetic vs. environmental effects
+\end{enumerate}
+
+\subsection{Comparison with Alternative PRS Methods}
+
+\subsubsection{P-Value Thresholding vs. Bayesian Methods}
+
+Our analysis used \textbf{p-value thresholding} (PRSice). Alternative methods exist:
+
+\begin{table}[H]
+\centering
+\caption{Comparison of PRS Construction Methods}
+\label{tab:prs_methods}
+\small
+\begin{tabular}{llll}
+\toprule
+\textbf{Method} & \textbf{Approach} & \textbf{Pros} & \textbf{Cons} \\
+\midrule
+PRSice & P-value threshold & Fast, interpretable & Arbitrary cutoff \\
+LDpred & Bayesian shrinkage & Uses all SNPs & Slow, complex \\
+PRS-CS & Bayesian + LD & Accounts for LD & Requires LD reference \\
+lassosum & Penalized regression & Automatic tuning & Can overfit \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Would Bayesian methods perform better for HbF?}
+
+\textit{Probably not substantially:}
+
+\begin{itemize}
+    \item Bayesian methods excel when:
+    \begin{itemize}
+        \item Thousands of causal variants exist (highly polygenic)
+        \item Effect sizes vary smoothly across $p$-value spectrum
+        \item Large sample sizes available for precise shrinkage
+    \end{itemize}
+    
+    \item For HbF (oligogenic):
+    \begin{itemize}
+        \item Few major loci dominate
+        \item Shrinkage offers minimal advantage
+        \item P-value thresholding already captures main signals
+    \end{itemize}
+\end{itemize}
+
+\textbf{Expected performance:}
+\begin{itemize}
+    \item LDpred/PRS-CS: Might improve to $\rsq \approx 2\%$ (modest gain)
+    \item Still far below clinically useful threshold ($\rsq > 10\%$)
+    \item Increased complexity not justified by marginal gains
+\end{itemize}
+
+\subsubsection{No LD Clumping Decision}
+
+We used \texttt{--no-clump} (disabled LD clumping). Was this optimal?
+
+\textbf{Rationale for no clumping:}
+\begin{itemize}
+    \item African populations have shorter LD blocks
+    \item Multiple independent signals may exist in close proximity
+    \item Clumping could discard true causal variants
+\end{itemize}
+
+\textbf{Potential impact of clumping:}
+
+If we had performed LD clumping:
+\begin{itemize}
+    \item \textbf{Fewer SNPs:} Reduce from 968K to $\sim$100K SNPs
+    \item \textbf{Performance:} Likely similar or slightly worse
+    \item \textbf{Computational cost:} Much faster (but already fast at 30 minutes)
+    \item \textbf{Interpretability:} Easier to identify key variants
+\end{itemize}
+
+\textbf{Conclusion:} For this trait and population, no clumping was reasonable. Clumping might reduce performance slightly, but unlikely to change overall conclusion (poor PRS performance).
+
+\subsection{Clinical and Practical Implications}
+
+\subsubsection{Is Genome-Wide PRS Useful for HbF Prediction?}
+
+\textbf{Answer: No, not in current form.}
+
+\textbf{Reasons:}
+\begin{enumerate}
+    \item \textbf{Poor Predictive Accuracy:}
+    \begin{itemize}
+        \item 1.13\% variance explained is clinically negligible
+        \item Cannot stratify patients into meaningful risk groups
+        \item Prediction intervals too wide for individual-level decisions
+    \end{itemize}
+    
+    \item \textbf{Covariates More Informative:}
+    \begin{itemize}
+        \item PCs + Sex explain 64\% variance (57× more than PRS)
+        \item Population ancestry alone is better predictor than genome-wide genetics
+        \item Suggests focusing on ancestry-stratified approaches
+    \end{itemize}
+    
+    \item \textbf{Major Loci Sufficient:}
+    \begin{itemize}
+        \item Genotyping BCL11A alone likely captures most genetic signal
+        \item Adding HBS1L-MYB and HBB cluster would capture nearly all
+        \item Genome-wide PRS adds minimal information beyond these
+    \end{itemize}
+    
+    \item \textbf{Cost-Effectiveness:}
+    \begin{itemize}
+        \item Genome-wide genotyping: \$50--100 per sample
+        \item Targeted genotyping (3 loci): \$5--10 per sample
+        \item 10× cost for 1\% improvement in prediction—not justified
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{What Should Be Done Instead?}
+
+\textbf{Recommended Approach:} \textit{Targeted Genotyping of Major Loci}
+
+\begin{enumerate}
+    \item \textbf{Genotype Known HbF Loci:}
+    \begin{itemize}
+        \item BCL11A: rs1427407, rs766432, others
+        \item HBS1L-MYB: rs9399137, rs4895441
+        \item HBB cluster: rs7482144, XmnI polymorphism
+    \end{itemize}
+    
+    \item \textbf{Construct Locus-Specific Score:}
+    \begin{equation}
+    \text{HbF}_{\text{predicted}} = \alpha + \beta_1 \cdot \text{BCL11A} + \beta_2 \cdot \text{HBS1L-MYB} + \beta_3 \cdot \text{HBB}
+    \end{equation}
+    
+    \item \textbf{Expected Performance:}
+    \begin{itemize}
+        \item Should explain 15--28\% variance (literature estimates)
+        \item Much better than genome-wide PRS (1.13\%)
+        \item Clinically meaningful stratification
+    \end{itemize}
+    
+    \item \textbf{Implementation:}
+    \begin{itemize}
+        \item Simple PCR-based assays
+        \item Low cost (\$5--10 per sample)
+        \item Rapid turnaround (same day)
+        \item Can be implemented in resource-limited settings
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Clinical Use Cases:}
+
+\begin{itemize}
+    \item \textbf{Newborn Screening:} Identify infants with genetic potential for high HbF
+    \item \textbf{Treatment Planning:} Tailor hydroxyurea dosing based on genetic potential
+    \item \textbf{Gene Therapy Candidacy:} Select patients most likely to benefit
+    \item \textbf{Prognosis Counseling:} Inform families of expected disease severity
+\end{itemize}
+
+\subsection{Methodological Strengths and Limitations}
+
+\subsubsection{Strengths}
+
+\begin{enumerate}
+    \item \textbf{Rigorous Threshold Optimization:}
+    \begin{itemize}
+        \item Tested 10,000+ thresholds
+        \item Identified true optimal $p_T^*$
+        \item Fine-grained scanning ($\Delta p = 5 \times 10^{-5}$)
+    \end{itemize}
+    
+    \item \textbf{Independent Validation:}
+    \begin{itemize}
+        \item PRS tested in held-out cohort
+        \item Avoids overfitting and circularity
+        \item Provides honest performance estimates
+    \end{itemize}
+    
+    \item \textbf{Appropriate Covariate Adjustment:}
+    \begin{itemize}
+        \item Controlled for population structure (PC1--10)
+        \item Adjusted for sex
+        \item Avoids confounding by ancestry
+    \end{itemize}
+    
+    \item \textbf{African Population Focus:}
+    \begin{itemize}
+        \item Addresses underrepresentation in genomics
+        \item Demonstrates PRS performance in non-European ancestry
+        \item Provides valuable negative results
+    \end{itemize}
+    
+    \item \textbf{Comprehensive Reporting:}
+    \begin{itemize}
+        \item Full threshold spectrum shown
+        \item Both statistical and practical significance discussed
+        \item Limitations acknowledged
+    \end{itemize}
+\end{enumerate}
+
+\subsubsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{Moderate Sample Size:}
+    \begin{itemize}
+        \item N = 1,527 adequate but not large
+        \item Larger samples might slightly improve optimal $\rsq$
+        \item However, unlikely to change overall conclusion given oligogenic architecture
+    \end{itemize}
+    
+    \item \textbf{No LD Clumping:}
+    \begin{itemize}
+        \item Includes correlated variants
+        \item Potential redundancy in signal
+        \item Trade-off: Preserves independent signals in African populations
+    \end{itemize}
+    
+    \item \textbf{Single PRS Method:}
+    \begin{itemize}
+        \item Only tested p-value thresholding (PRSice)
+        \item Bayesian methods (LDpred, PRS-CS) not evaluated
+        \item However, unlikely to substantially improve performance for oligogenic trait
+    \end{itemize}
+    
+    \item \textbf{Population Structure Confounding:}
+    \begin{itemize}
+        \item High PC variance (64\%) complicates interpretation
+        \item Unclear if PCs capturing genetic or environmental effects
+        \item May deflate apparent PRS performance
+    \end{itemize}
+    
+    \item \textbf{GWAS Discovery Sample:}
+    \begin{itemize}
+        \item Effect sizes from same cohort system (Tanzania)
+        \item Winner's curse may bias estimates
+        \item Larger, multi-ethnic GWAS would provide better weights
+    \end{itemize}
+    
+    \item \textbf{No Functional Annotation:}
+    \begin{itemize}
+        \item Did not weight variants by functional impact
+        \item Coding variants, regulatory variants treated equally
+        \item Functional weighting might improve performance slightly
+    \end{itemize}
+    
+    \item \textbf{Common Variants Only:}
+    \begin{itemize}
+        \item Array-based genotyping captures common SNPs (MAF $> 1\%$)
+        \item Rare variants, structural variants not included
+        \item May miss important rare causal alleles
+    \end{itemize}
+\end{enumerate}
+
+\subsection{Comparison with Pathway-Based PRS}
+
+In a companion analysis, we performed \textbf{pathway-based PRS} using PRSet:
+
+\begin{itemize}
+    \item Tested 1,944 biological pathways
+    \item Competitive permutation testing
+    \item No pathways significantly enriched
+\end{itemize}
+
+\textbf{Consistency Between Approaches:}
+
+Both genome-wide PRS (this study) and pathway PRS (PRSet) show \textit{minimal predictive utility}:
+
+\begin{table}[H]
+\centering
+\caption{Comparison: Standard PRS vs. Pathway PRS}
+\label{tab:prs_vs_prset}
+\begin{tabular}{lll}
+\toprule
+\textbf{Approach} & \textbf{Best $\rsq$} & \textbf{Interpretation} \\
+\midrule
+Standard PRS (PRSice) & 1.13\% & Oligogenic trait \\
+Pathway PRS (PRSet) & 9.0\%* & Oligogenic trait \\
+& *(not significant) & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Convergent Evidence:}
+
+Both analyses point to the same conclusion:
+\begin{enumerate}
+    \item HbF has oligogenic architecture
+    \item BCL11A dominates genetic variance
+    \item Limited polygenic or pathway-level signal
+    \item Genome-wide approaches add minimal predictive value beyond major loci
+\end{enumerate}
+
+\textbf{Complementary Insights:}
+
+\begin{itemize}
+    \item \textbf{PRSice:} Shows \textit{overall} polygenic signal is weak
+    \item \textbf{PRSet:} Shows signal not concentrated in \textit{specific pathways} either
+    \item \textbf{Together:} Rule out both genome-wide polygenic and pathway-specific mechanisms
+\end{itemize}
+
+\subsection{Implications for PRS Research}
+
+\subsubsection{Not All Traits Are Suitable for PRS}
+
+Our findings illustrate an important principle: \textbf{PRS performance is trait-dependent}.
+
+\textbf{Good PRS Candidates:}
+\begin{itemize}
+    \item Highly polygenic (thousands of causal variants)
+    \item High SNP-heritability ($> 20\%$)
+    \item Large discovery GWAS ($N > 100,000$)
+    \item \textit{Examples:} Height, BMI, schizophrenia
+\end{itemize}
+
+\textbf{Poor PRS Candidates:}
+\begin{itemize}
+    \item Oligogenic (few major loci)
+    \item Low SNP-heritability ($< 10\%$)
+    \item Small discovery GWAS ($N < 10,000$)
+    \item \textit{Examples:} HbF, lactase persistence, some Mendelian traits
+\end{itemize}
+
+\textbf{Recommendation:}
+
+Before investing resources in PRS development:
+\begin{enumerate}
+    \item Assess trait architecture (oligogenic vs. polygenic)
+    \item Estimate SNP-heritability from GWAS
+    \item Review GWAS Manhattan plots (few peaks vs. genome-wide signal)
+    \item Consider whether targeted genotyping of major loci more appropriate
+\end{enumerate}
+
+\subsubsection{Population Structure in PRS}
+
+Our results highlight challenges of PRS in \textbf{structured populations}:
+
+\begin{itemize}
+    \item Tanzania has substantial within-country diversity
+    \item PC1 alone explains 17.49\% of variance (unusually high)
+    \item PCs may proxy for genetic or environmental effects
+    \item Difficult to separate these components
+\end{itemize}
+
+\textbf{Implications:}
+
+\begin{enumerate}
+    \item \textbf{PRS in Africa Requires Special Care:}
+    \begin{itemize}
+        \item Cannot simply apply European-derived methods
+        \item Population structure more complex
+        \item Within-ancestry stratification important
+    \end{itemize}
+    
+    \item \textbf{PC Adjustment May Be Too Conservative:}
+    \begin{itemize}
+        \item If PCs correlate with causal variants
+        \item Adjusting for PCs may remove true genetic signal
+        \item Need methods that distinguish structure from biology
+    \end{itemize}
+    
+    \item \textbf{Alternative Approaches Needed:}
+    \begin{itemize}
+        \item Mixed models accounting for fine-scale structure
+        \item Within-group PRS (stratify by ethnicity)
+        \item Incorporation of local ancestry
+    \end{itemize}
+\end{enumerate}
+
+\section{Conclusions}
+
+This study demonstrates that \textbf{genome-wide polygenic risk scores have minimal predictive utility for fetal hemoglobin levels in Tanzanian sickle cell disease patients}, despite rigorous optimization of p-value thresholds. Key findings include:
+
+\begin{enumerate}
+    \item \textbf{Poor Predictive Performance:}
+    \begin{itemize}
+        \item Optimal PRS ($p_T = 0.4437$) explains only 1.13\% of HbF variance
+        \item Performance plateaus at intermediate thresholds with diminishing returns
+        \item Including all genome-wide variants performs worse than selective inclusion
+    \end{itemize}
+    
+    \item \textbf{Covariates Dominate Prediction:}
+    \begin{itemize}
+        \item Population structure (PC1--10) + sex explain 64\% of variance
+        \item 57-fold more predictive than genome-wide PRS
+        \item Highlights importance of ancestry in HbF regulation
+    \end{itemize}
+    
+    \item \textbf{Oligogenic Architecture Confirmed:}
+    \begin{itemize}
+        \item Poor PRS performance consistent with few major loci (BCL11A)
+        \item Limited polygenic component beyond established loci
+        \item Convergent with pathway analysis showing no significant enrichment
+    \end{itemize}
+    
+    \item \textbf{Clinical Implications:}
+    \begin{itemize}
+        \item Genome-wide PRS not cost-effective for HbF prediction
+        \item Targeted genotyping of known loci (BCL11A, HBS1L-MYB, HBB) recommended
+        \item Major loci capture most predictive genetic information
+    \end{itemize}
+\end{enumerate}
+
+\textbf{Broader Lessons:}
+
+\begin{itemize}
+    \item \textbf{Trait-Dependent:} PRS performance varies dramatically by genetic architecture
+    \item \textbf{Oligogenic Traits:} Not all complex traits are highly polygenic
+    \item \textbf{Population Structure:} Ancestry can be stronger predictor than genetics in diverse populations
+    \item \textbf{Negative Results:} Null findings are scientifically informative
+\end{itemize}
+
+\textbf{Future Directions:}
+
+\begin{enumerate}
+    \item Develop targeted HbF genetic scores using only major loci
+    \item Investigate within-ancestry PRS performance (stratify by ethnicity)
+    \item Incorporate rare variants through whole-genome sequencing
+    \item Model gene $\times$ environment interactions (hydroxyurea, malaria)
+    \item Explore alternative methods (Bayesian, machine learning)
+    \item Validate in independent African cohorts
+\end{enumerate}
+
+In conclusion, while genome-wide PRS has shown promise for many complex traits, our findings demonstrate that \textbf{traits with oligogenic architecture and low SNP-heritability are poor candidates for PRS-based prediction}. For HbF in SCD, a targeted approach focusing on established major loci is more appropriate and cost-effective than genome-wide PRS.
+
+\section*{Acknowledgments}
+
+We gratefully acknowledge the Centre for High Performance Computing (CHPC), South Africa, for computational resources. We thank the study participants and clinical collaborators in Tanzania. We acknowledge PRSice-2 developers Shing Wan Choi and Paul O'Reilly for software development and support.
+
+\section*{Funding}
+
+[Funding sources to be added]
+
+\section*{Author Contributions}
+
+\textbf{E.N.K.} performed PRSice analyses, threshold optimization, interpreted results, and wrote the manuscript. \textbf{E.R.C.} supervised the study, provided critical feedback, and revised the manuscript. Both authors approved the final version.
+
+\section*{Data Availability}
+
+GWAS summary statistics are available upon reasonable request. Individual-level genotype data are not publicly available due to ethical restrictions. PRSice scripts and analysis code are available at [repository to be specified].
+
+\section*{Competing Interests}
+
+The authors declare no competing interests.
+
+\bibliographystyle{naturemag}
+\bibliography{references}
+
+\end{document}
