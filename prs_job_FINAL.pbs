@@ -1,0 +1,68 @@
+#!/bin/bash
+#PBS -N PRSice_FINAL
+#PBS -l select=1:ncpus=12:mpiprocs=24
+#PBS -l walltime=144:00:00
+#PBS -q seriallong
+#PBS -P CBBI0818
+#PBS -m abe
+#PBS -M nkabongo@aims.ac.rw
+
+module purge
+module load chpc/BIOMODULES
+module load R/4.2.0
+
+cd /mnt/lustre/groups/CBBI0818/TZ/data/data_target_prisce
+
+exec 1>/mnt/lustre/groups/CBBI0818/TZ/data/logs/prs_FINAL_${PBS_JOBID}.out
+exec 2>/mnt/lustre/groups/CBBI0818/TZ/data/logs/prs_FINAL_${PBS_JOBID}.err
+
+echo "=========================================="
+echo "PRSice Analysis - FINAL RUN"
+echo "Started: $(date)"
+echo "Target: data_without_qcfinal"
+echo "Covariates: data_without_qcfinal_qc_covariates.txt"
+echo "=========================================="
+
+Rscript PRSice.R \
+    --dir . \
+    --prsice ./PRSice_linux \
+    --base /mnt/lustre/groups/CBBI0818/TZ/data/qc_results/gcta/gcta_mlma_results.mlma \
+    --target /mnt/lustre/groups/CBBI0818/TZ/data/data_target_prisce/data_without_qcfinal \
+    --keep /mnt/lustre/groups/CBBI0818/TZ/data/data_target_prisce/data_without_qcfinal.qc.fam \
+    --extract /mnt/lustre/groups/CBBI0818/TZ/data/data_target_prisce/data_without_qcfinal.qc.bim \
+    --thread 8 \
+    --stat b \
+    --beta \
+    --binary-target F \
+    --snp SNP \
+    --chr Chr \
+    --bp bp \
+    --A1 A1 \
+    --A2 A2 \
+    --pvalue p \
+    --cov data_without_qcfinal_qc_covariates.txt \
+    --cov-col PC1,PC2,PC3,PC4,PC5,PC6,PC7,PC8,PC9,PC10,Sex \
+    --clump-kb 250 \
+    --clump-r2 0.1 \
+    --clump-p 1 \
+    --bar-levels 0.001,0.005,0.01,0.05,0.1,0.2,0.3,0.4,0.5,1 \
+    --quantile 100 \
+    --quant-break 1,5,10,20,40,60,80,90,95,99,100 \
+    --quant-ref 60 \
+    --all-score \
+    --plot \
+    --out data_without_qcfinal_PRS2
+
+exitcode=$?
+
+echo ""
+echo "=========================================="
+echo "PRSice completed with exit code: $exitcode"
+echo "Finished: $(date)"
+echo "=========================================="
+echo ""
+echo "Output files:"
+ls -lh data_without_qcfinal_PRS* 2>&1
+echo ""
+echo "Plots:"
+ls -lh *PLOT*.png 2>&1 || echo "No plots generated"
